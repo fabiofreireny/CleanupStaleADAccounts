@@ -8,5 +8,5 @@ It will only delete objects located within the pre-defined Disabled OUs. It assu
 - (optional) Sends out status email
 - Supports WhatIf
 
-## This script is not a replacement for having a proper off-boarding process! 
-## It is meant to catch objects that have "fallen through the cracks"!
+### This script is not a replacement for having a proper off-boarding process! 
+### It is meant to catch objects that have "fallen through the cracks"!
