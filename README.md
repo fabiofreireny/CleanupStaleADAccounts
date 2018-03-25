@@ -1,4 +1,4 @@
-# CleanStaleADAccounts
+# CleanupStaleADAccounts
 Disables and/or deletes stale computer and user accounts
 
 - Supports an exception list
