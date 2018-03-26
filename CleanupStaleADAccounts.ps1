@@ -60,8 +60,8 @@ Dry-run
 #>
 
 Param(
-    [int]$disableAfter = 0,
-    [int]$deleteAfter = 30,
+    [int]$disableAfter,
+    [int]$deleteAfter,
     [string]$exceptionListPath = ".\staleObjectsExceptionList.txt",
     [string]$logFilePath = "d:\logs\staleObjects.log",
     [string]$from = "staleObjects@domain.com",
