@@ -59,6 +59,7 @@ Dry-run
 .\CleanStaleADObjects.ps1 -disableAfter 90 -deleteAfter 180 -whatIf
 #>
 
+[CmdletBinding(SupportsShouldProcess,ConfirmImpact="High")]
 Param(
     [int]$disableAfter,
     [int]$deleteAfter,
@@ -71,14 +72,13 @@ Param(
     [string]$disabledUsersOU = "OU=xEmployees,$($(Get-ADDomain).DistinguishedName)",
     [string]$disabledOnTextADPropertyName = "Location",
     [boolean]$processComputers = $true,
-    [boolean]$processUsers = $true,
-    [switch]$whatIf = $true
+    [boolean]$processUsers = $true
 )
 
 $disableDays    = (Get-Date).Adddays(-$disableAfter)
 $deleteDays     = (Get-Date).Adddays(-$deleteAfter)
 $Today          = (Get-Date -UFormat "%Y-%m-%d")
-$disabledOnText = @{$disabledOnTextADPropertyName = ("Disabled On $Today") }
+$disabledOnText = @{$disabledOnTextADPropertyName = ("Disabled On $Today")}
 
 if (Test-Path $exceptionListPath) {
     $exceptionList = (Get-Content -Path $exceptionListPath)
@@ -87,28 +87,27 @@ if (Test-Path $exceptionListPath) {
 # Process Computers
 if ($processComputers) {
     if ($disableAfter -gt 0) {
-        $Computers = Get-ADComputer -Filter {(LastLogonDate -lt $disableDays) -and (Enabled -eq $true)} |`
-             ? { ($exceptionList -notcontains $_.Name) } | sort -Property Name
+        $Computers = Get-ADComputer -Filter {(LastLogonDate -lt $disableDays) -and (Enabled -eq $true)} |
+             Where-Object { ($exceptionList -notcontains $_.Name) } | Sort-Object -Property Name
 
         # Disable computer account(s)
-        if ($whatIf) {
-            $Computers | Set-ADComputer @disabledOnText -WhatIf
-            $Computers | Disable-ADAccount -WhatIf
-            $Computers | Move-ADObject -TargetPath $disabledComputersOU -WhatIf
-        } else {
-            $Computers | Set-ADComputer @disabledOnText
-            $Computers | Disable-ADAccount
-            $Computers | Move-ADObject -TargetPath $disabledComputersOU
+        $computers | ForEach-Object {
+            if ($PSCmdlet.ShouldProcess("Disable $_")) {
+                $_ | Set-ADComputer @disabledOnText
+                $_ | Disable-ADAccount
+                $_ | Move-ADObject -TargetPath $disabledComputersOU
+            }
         }
     }
     if ($deleteAfter -gt 0) {
-        $Computers = Get-ADComputer -SearchBase $disabledComputersOU -Filter {(LastLogonDate -lt $deleteDays) -and (Enabled -eq $false)}
+        $Computers = Get-ADComputer -SearchBase $disabledComputersOU -Filter {(LastLogonDate -lt $deleteDays) -and (Enabled -eq $false)} | 
+            Where-Object { ($exceptionList -notcontains $_.Name) } | Sort-Object -Property Name
 
         # Delete computer account(s)
-        if ($whatIf) {
-            $Computers | Remove-ADObject -WhatIf
-        } else {
-            $Computers | Remove-ADObject
+        $Computers | ForEach-Object {
+            if ($PSCmdlet.ShouldProcess("DELETE $_")) {
+                $_ | Remove-ADObject
+            }
         }
     }
 }
@@ -117,7 +116,7 @@ if ($processComputers) {
 # Process User
 if ($processUsers) {
     $Users = Get-ADUser -Filter {(LastLogonDate -lt $disableDays) -and (Enabled -eq $true)} |`
-        ? { ($exceptionList -notcontains $_.Name) } | sort -Property Name
+        Where-Object { ($exceptionList -notcontains $_.Name) } | Sort-Object -Property Name
 
     #$Users | Select-Object -Property Name, Enabled, LastLogonDate, PasswordLastSet, PasswordNeverExpires | sort -Property Name  | Export-Csv c:\temp\staleUsers.csv
 
